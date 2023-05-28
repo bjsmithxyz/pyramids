@@ -98,7 +98,7 @@
 
             // Load a texture for the skybox
             var textureLoader = new THREE.TextureLoader();
-            textureLoader.load('./node_modules/img/starfield_big.jpg', function(texture) {
+            textureLoader.load('./img/starfield.png', function(texture) {
                 // Once the texture is loaded, create a sphere geometry and apply the texture to it
                 var skyboxGeometry = new THREE.SphereGeometry(500, 128, 128); // Radius, width segments, height segments
                 var skyboxMaterial = new THREE.MeshBasicMaterial({ map: texture, side: THREE.BackSide });
