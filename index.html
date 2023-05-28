@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>pyramids</title>
+        <style>
+            body { margin: 0; }
+            canvas { display: block; }
+        </style>
+    </head>
+    <body>
+        <script type="module">
+            // Import necessary modules from Three.js
+            import * as THREE from 'three';
+            import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+            // Create a scene, a camera and a renderer
+            var scene = new THREE.Scene();
+            var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            var renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Define the geometry and material for the cubes
+            var geometry = new THREE.BoxGeometry();
+            var material = new THREE.MeshPhongMaterial({ color: 0x282a36 });
+
+            // Create three cubes and add them to the scene
+            var cubes = [];
+            for (var i = 0; i < 3; i++) {
+                var cube = new THREE.Mesh(geometry, material);
+                cube.position.set(Math.random() * 10 - 5, Math.random() * 10 - 5, Math.random() * 10 - 5);
+                cubes.push(cube);
+                scene.add(cube);
+            }
+
+            // Calculate the average position of the cubes
+            var averagePosition = new THREE.Vector3();
+            for (var i = 0; i < cubes.length; i++) {
+                averagePosition.add(cubes[i].position);
+            }
+            averagePosition.divideScalar(cubes.length);
+
+            // Create a light source and add it to the camera
+            var light = new THREE.PointLight(0xffffff, 1);
+            light.position.set(-10, 10, 10);
+            camera.add(light);
+
+            // Add the camera to the scene
+            scene.add(camera);
+
+            // Add OrbitControls to allow the user to rotate the camera around the cubes
+            var controls = new OrbitControls(camera, renderer.domElement);
+            controls.target = averagePosition; // Set the target to the average position of the cubes
+            controls.enableDamping = true; // Enable damping
+            controls.dampingFactor = 0.05; // Set damping factor
+
+            // Position the camera
+            camera.position.z = 25;
+
+            // Create a Raycaster, a Vector2 for the mouse position, and an array to hold the flares
+            var raycaster = new THREE.Raycaster();
+            var mouse = new THREE.Vector2();
+            var flares = [];
+
+            // Define the colors for the flares
+            var flareColors = [0x8be9fd, 0x50fa7b, 0xffb86c, 0xff79c6, 0xbd93f9, 0xff5555, 0xf1fa8c];
+
+            // Function to handle the mousedown event
+            function onMouseDown(event) {
+                // Update the mouse position
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                // Update the raycaster direction
+                raycaster.setFromCamera(mouse, camera);
+
+                // Check if one of the cubes was clicked
+                var intersects = raycaster.intersectObjects(cubes);
+                for (var i = 0; i < intersects.length; i++) {
+                    // Create a flare and add it to the scene and the flares array
+                    var flare = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.1),
+                        new THREE.MeshBasicMaterial({ color: flareColors[Math.floor(Math.random() * flareColors.length)] })
+                    );
+                    flare.position.copy(intersects[i].point);
+                    flare.velocity = new THREE.Vector3(
+                        Math.random() - 0.5,
+                        Math.random() - 0.5,
+                        Math.random() - 0.5
+                    );
+                    flares.push(flare);
+                    scene.add(flare);
+                }
+            }
+
+            // Add the mousedown event listener
+            window.addEventListener('mousedown', onMouseDown, false);
+
+            // Load a texture for the skybox
+            var textureLoader = new THREE.TextureLoader();
+            textureLoader.load('./node_modules/img/starfield_big.jpg', function(texture) {
+                // Once the texture is loaded, create a sphere geometry and apply the texture to it
+                var skyboxGeometry = new THREE.SphereGeometry(500, 128, 128); // Radius, width segments, height segments
+                var skyboxMaterial = new THREE.MeshBasicMaterial({ map: texture, side: THREE.BackSide });
+                var skybox = new THREE.Mesh(skyboxGeometry, skyboxMaterial);
+
+                // Add the skybox to the scene
+                scene.add(skybox);
+            });
+
+            // Function to animate the scene
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Rotate each cube around the central point
+                for (var i = 0; i < cubes.length; i++) {
+                    cubes[i].position.x = 1 * Math.cos(Date.now() * 0.001 + i * 2 * Math.PI / cubes.length);
+                    cubes[i].position.z = 1 * Math.sin(Date.now() * 0.001 + i * 2 * Math.PI / cubes.length);
+                }
+
+                // Check for collisions between the cubes
+                for (var i = 0; i < cubes.length; i++) {
+                    for (var j = i + 1; j < cubes.length; j++) {
+                        if (cubes[i].position.distanceTo(cubes[j].position) < 1) {
+                            // If a collision is detected, change the color of the cubes
+                            cubes[i].material.color.set(0xff0000);
+                            cubes[j].material.color.set(0xff0000);
+                        }
+                    }
+                }
+
+                // Update the position of each flare and remove it if it's too far from the first cube
+                for (var i = 0; i < flares.length; i++) {
+                    flares[i].position.add(flares[i].velocity);
+                    if (flares[i].position.distanceTo(cubes[0].position) > 100) {
+                        scene.remove(flares[i]);
+                        flares.splice(i, 1);
+                        i--;
+                    }
+                }
+
+                // Update the controls and render the scene
+                controls.update();
+                renderer.render(scene, camera);
+            }
+
+            // Start the animation loop
+            animate();
+        </script>
+    </body>
+</html>
